@@ -272,6 +272,8 @@ def post_proc(job):
     import gsd
     import gsd.hoomd
     import freud
+    from scipy import stats
+    from scipy.stats import linregress
 
     def msd_from_gsd(gsdfile, start=-30, stop=-1, atom_type='c', msd_mode = "window"):
         from gsd import pygsd
@@ -305,30 +307,41 @@ def post_proc(job):
         os.makedirs(os.path.join(job.ws,"rdf/rdf_txt"))
         os.makedirs(os.path.join(job.ws,"rdf/rdf_png"))
         os.makedirs(os.path.join(job.ws,"msd/msd_array"))
-        os.makedirs(os.path.join(job.ws,"msd/msd_png"))
         os.makedirs(os.path.join(job.ws,"diffraction/diffraction_plots"))
+        slopes ={}     
         for types in all_atoms:
-            A_name=types
-            B_name=types
-            rdf,norm = gsd_rdf(gsdfile,A_name, B_name, r_min=0.01, r_max=5)
-            x = rdf.bin_centers
-            y = rdf.rdf*norm
-            save_path= os.path.join(job.ws,"rdf/rdf_txt/{}_rdf.txt".format(A_name))
-            np.savetxt(save_path, np.transpose([x,y]), delimiter=',', header= "bin_centers, rdf")
-            plt.xlabel("r (A.U.)", fontsize=14)
-            plt.ylabel("g(r)", fontsize=14)
-            plt.plot(x, y)
-            save_plot= os.path.join(job.ws,"rdf/rdf_png/{}_rdf.png".format(A_name))
-            plt.savefig(save_plot)
-            msd_array= msd_from_gsd(gsdfile, start=-30, stop=-1, atom_type=A_name, msd_mode = "window")
-            save_path= os.path.join(job.ws, "msd/msd_array/{}.npy".format(A_name))
-            np.save(save_path, msd_array)
-            plt.plot(msd_array)
-            plt.title("msd of %s %s's at %skT and %sden" % (job.sp['input'], A_name, job.sp['kT_reduced'], job.sp['density']))
-            plt.xlabel("frames", fontsize=14)
-            plt.ylabel("msd", fontsize=14)
-            save_msd= os.path.join(job.ws, "msd/msd_png/{}.png".format(A_name))
-            plt.savefig(save_msd)
+    	    A_name=types
+    	    B_name=types
+    	    rdf,norm = gsd_rdf(gsdfile,A_name, B_name, r_min=0.01, r_max=5)
+    	    x = rdf.bin_centers
+    	    y = rdf.rdf*norm
+    	    save_path= os.path.join(job.ws,"rdf/rdf_txt/{}_rdf.txt".format(A_name))
+    	    np.savetxt(save_path, np.transpose([x,y]), delimiter=',', header= "bin_centers, rdf")
+    	    fig = plt.figure()
+    	    plt.plot(x, y)
+    	    plt.title("rdf of %s %s at %skT and %sden" % (job.sp['input'],A_name, job.sp['kT_reduced'], job.sp['density']))
+    	    plt.xlabel("r (A.U.)", fontsize=14)
+    	    plt.ylabel("g(r)", fontsize=14)
+    	    plt.plot(x, y)
+    	    save_plot= os.path.join(job.ws,"rdf/rdf_png/{}_rdf.png".format(A_name))
+    	    plt.savefig(save_plot)
+    	    fig= plt.figure(2)
+    	    msd_array= msd_from_gsd(gsdfile, start=-30, stop=-1, atom_type=A_name, msd_mode = "window")
+    	    save_path= os.path.join(job.ws, "msd/msd_array/{}.npy".format(A_name))
+    	    np.save(save_path, msd_array)
+    	    plt.plot(msd_array, label=A_name)
+    	    plt.title("msd of %s at %skT and %sden" % (job.sp['input'], job.sp['kT_reduced'], job.sp['density']))
+    	    plt.xlabel("frames", fontsize=14)
+    	    plt.ylabel("msd", fontsize=14)
+    	    plt.legend()
+    	    plt.savefig(os.path.join(job.ws, "msd/msd.png"))
+    	    x_length=len(msd_array)
+    	    x = list(range(x_length))
+    	    y = msd_array
+    	    slope = stats.linregress(x,y)
+    	    slopes['{}_slope'.format(types)] = slope.slope
+    	    job.doc['msd_slopes'] = slopes
+
     with gsd.hoomd.open(gsdfile) as f:
         snap = f[-1]
         points = snap.particles.position
@@ -340,7 +353,7 @@ def post_proc(job):
                 dp.compute((box, points), view_orientation=q)
                 dp.plot(ax=ax)
                 ax.set_title(f"Diffraction Pattern\nq=[{qx:.2f} {qy:.2f} {qz:.2f} {qw:.2f}]")
-                plt.savefig(os.path.join(job.ws, f"diffraction/diffraction_plots/{q}.png"))
+                plt.savefig(os.path.join(job.ws, f"diffraction/diffraction_plots/{q}.png")) 
 
 if __name__ == "__main__":
     MyProject().main()
