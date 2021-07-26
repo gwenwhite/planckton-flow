@@ -249,6 +249,8 @@ def post_proc(job):
     import gsd.hoomd
     import gsd.pygsd
     import freud
+    from scipy import stats
+    from scipy.stats import linregress
 
     def msd_from_gsd(gsdfile, start=-30, stop=-1, atom_type='c', msd_mode = "window"):
         from gsd import pygsd
@@ -275,6 +277,7 @@ def post_proc(job):
         os.makedirs(os.path.join(job.ws,"rdf/rdf_png"))
         os.makedirs(os.path.join(job.ws,"msd/msd_txt"))
         os.makedirs(os.path.join(job.ws,"diffraction/diffraction_plots"))
+        slopes ={}     
         for types in all_atoms:
             A_name=types
             B_name=types
@@ -301,7 +304,7 @@ def post_proc(job):
             plt.legend(bbox_to_anchor = (1,1), ncol=1, loc="upper left")
             save_msd= os.path.join(job.ws, "msd/msd.png")
             plt.savefig(save_msd)
-    with gsd.hoomd.open(gsdfile) as f:
+   with gsd.hoomd.open(gsdfile) as f:
         snap = f[-1]
         points = snap.particles.position
         box = freud.Box.from_box(snap.configuration.box)
@@ -312,6 +315,7 @@ def post_proc(job):
                 dp.compute((box, points), view_orientation=q)
                 dp.plot(ax=ax)
                 ax.set_title(f"Diffraction Pattern\nq=[{qx:.2f} {qy:.2f} {qz:.2f} {qw:.2f}]")
-                plt.savefig(os.path.join(job.ws, f"diffraction/diffraction_plots/{q}.png"))
+                plt.savefig(os.path.join(job.ws, f"diffraction/diffraction_plots/{q}.png")) 
+
 if __name__ == "__main__":
     MyProject().main()
