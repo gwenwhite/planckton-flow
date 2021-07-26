@@ -260,7 +260,7 @@ def post_proc(job):
         	if atom_type == 'all':
             		atom_positions = frame.particles.position[:]
         	else:
-            		atom_positions = atom_type_pos(frame, atom_type)
+            		atom_positions = cmeutils.gsd_utils.get_type_position(atom_type, snap=frame)
         	positions.append(atom_positions)
         msd = freud.msd.MSD(box=trajectory[-1].configuration.box, mode=msd_mode)
         msd.compute(positions)
@@ -269,13 +269,11 @@ def post_proc(job):
 
     gsdfile= job.fn('trajectory.gsd')
     with gsd.hoomd.open(gsdfile) as f:
-        type_pos = gsd_utils.get_type_position(typename="c", snap=frame)
         snap= f[0]
         all_atoms=snap.particles.types
         os.makedirs(os.path.join(job.ws,"rdf/rdf_txt"))
         os.makedirs(os.path.join(job.ws,"rdf/rdf_png"))
-        os.makedirs(os.path.join(job.ws,"msd/msd_array"))
-        os.makedirs(os.path.join(job.ws,"msd/msd_png"))
+        os.makedirs(os.path.join(job.ws,"msd/msd_txt"))
         os.makedirs(os.path.join(job.ws,"diffraction/diffraction_plots"))
         for types in all_atoms:
             A_name=types
@@ -283,21 +281,25 @@ def post_proc(job):
             rdf,norm = gsd_rdf(gsdfile,A_name, B_name, r_min=0.01, r_max=5)
             x = rdf.bin_centers
             y = rdf.rdf*norm
-            save_path= os.path.join(job.ws,"rdf/rdf_txt/{}_rdf.txt".format(A_name))
+            save_path= os.path.join(job.ws,"rdf/rdf_txt/{}_rdf.txt".format(types))
             np.savetxt(save_path, np.transpose([x,y]), delimiter=',', header= "bin_centers, rdf")
+            rdf = plt.figure()
             plt.xlabel("r (A.U.)", fontsize=14)
             plt.ylabel("g(r)", fontsize=14)
+            plt.title("RDF of %s %s's at %skT and %sden"%(job.sp['input'],types, job.sp['kT_reduced'],job.sp['density']))
             plt.plot(x, y)
-            save_plot= os.path.join(job.ws,"rdf/rdf_png/{}_rdf.png".format(A_name))
+            save_plot= os.path.join(job.ws,"rdf/rdf_png/{}_rdf.png".format(types))
             plt.savefig(save_plot)
-            msd_array= msd_from_gsd(gsdfile, start=-30, stop=-1, atom_type=A_name, msd_mode = "window")
-            save_path= os.path.join(job.ws, "msd/msd_array/{}.npy".format(A_name))
-            np.save(save_path, msd_array)
-            plt.plot(msd_array)
-            plt.title("msd of %s %s's at %skT and %sden" % (job.sp['input'], A_name, job.sp['kT_reduced'], job.sp['density']))
+            msd = plt.figure(2, figsize= (7.5, 5))
+            msd_array= msd_from_gsd(gsdfile, start=-30, stop=-1, atom_type=types, msd_mode = "window")
+            save_path= os.path.join(job.ws, "msd/msd_txt/{}.txt".format(types))
+            np.savetxt(save_path, msd_array, delimiter=",",header="msd")
+            plt.plot(msd_array,label=types)
+            plt.title("MSD of %s at %skT and %sden" % (job.sp['input'], job.sp['kT_reduced'], job.sp['density']))
             plt.xlabel("frames", fontsize=14)
             plt.ylabel("msd", fontsize=14)
-            save_msd= os.path.join(job.ws, "msd/msd_png/{}.png".format(A_name))
+            plt.legend(bbox_to_anchor = (1,1), ncol=1, loc="upper left")
+            save_msd= os.path.join(job.ws, "msd/msd.png")
             plt.savefig(save_msd)
     with gsd.hoomd.open(gsdfile) as f:
         snap = f[-1]
