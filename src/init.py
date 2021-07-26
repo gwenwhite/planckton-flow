@@ -24,10 +24,10 @@ parameters = OrderedDict({
         #["CZTPTZ8FITIC-gaff"],
         #["CZTPTZITIC-gaff"],
         #["PCBM-gaff"],
-        #["P3HT-16-gaff"],
+        ["P3HT-16-gaff"],
         #["ITIC-gaff"],
         #["ITIC-Th-gaff"],
-        ["IEICO-gaff"],
+        #["IEICO-gaff"],
         #["IDT-2BR-gaff"],
         #["EH-IDTBR-gaff"],
         #["TruxTP6FITIC-gaff"],
@@ -37,10 +37,10 @@ parameters = OrderedDict({
     # If a mixture is used, the number of each compound in the mixture
     # needs to be specified:
     # "n_compounds" = [(100,100), (1000,500)]
-    "n_compounds": [50],
+    "n_compounds": [100],
 
     # Density must be specified as a pair containing (value, unit)
-   "density": [(0.9, "g/cm**3")],
+   "density": [(0.7, "g/cm**3")],
 
     # Energy scaling "solvent" parameter
     "e_factor": [1.0],
@@ -53,16 +53,16 @@ parameters = OrderedDict({
         ],
 
     # Reduced temperatures specified in simulation units
-    "kT_reduced": [1.0],
+    "kT_reduced": [0.5],
 
     # Simulation parameters
     # Thermostat coupling
-    "tau": [0.03],
+    "tau": [1],
 
     # Number of steps to shrink the box
     "shrink_steps": [1e3],
     # Number of steps to run final simulation
-    "n_steps": [1e6],
+    "n_steps": [1e7],
     # Timestep size
     "dt": [0.0001],
     # Whether to remove hydrogen atoms
